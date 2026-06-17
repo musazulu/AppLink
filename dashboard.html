@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Numbers Dashboard</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#0f172a; color:#e2e8f0; padding:20px; }
+    .container { max-width:800px; margin:0 auto; }
+    h1 { font-size:24px; }
+    table { width:100%; border-collapse:collapse; background:#1e293b; border-radius:12px; overflow:hidden; margin-top:16px; }
+    th,td { padding:10px 14px; text-align:left; font-size:14px; }
+    th { background:#334155; color:#94a3b8; font-weight:600; text-transform:uppercase; font-size:12px; }
+    td { border-bottom:1px solid #334155; }
+    .btn { padding:10px 20px; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; margin-right:8px; }
+    .btn-danger { background:#ef4444; color:#fff; }
+    .btn-secondary { background:#334155; color:#e2e8f0; }
+    .empty { text-align:center; padding:40px; color:#64748b; }
+    .stats { color:#94a3b8; margin:8px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>&#128203; Collected Numbers</h1>
+    <p class="stats" id="statsLine">Loading...</p>
+    <div>
+      <button class="btn btn-secondary" onclick="copyAll()">&#128203; Copy All</button>
+      <button class="btn btn-danger" onclick="clearAll()">&#128465; Clear All</button>
+    </div>
+    <textarea id="phoneList" readonly style="width:100%;height:100px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:12px;font-family:monospace;margin-top:8px;"></textarea>
+    <table><thead><tr><th>#</th><th>Phone</th><th>Date</th><th>IP</th></tr></thead><tbody id="tableBody"></tbody></table>
+  </div>
+  <script>
+    async function load() {
+      try {
+        const r = await fetch('/api/numbers'), data = await r.json();
+        document.getElementById('statsLine').textContent = data.length + ' total';
+        const ta = document.getElementById('phoneList');
+        if (!data.length) { ta.value=''; document.getElementById('tableBody').innerHTML='<tr><td colspan="4" class="empty">No numbers yet</td></tr>'; return; }
+        const rev = [...data].reverse();
+        ta.value = rev.map(e=>e.phone).join('\n');
+        document.getElementById('tableBody').innerHTML = rev.map((e,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(e.phone)+'</td><td>'+esc(e.timestamp||'--')+'</td><td>'+esc(e.ip||'--')+'</td></tr>').join('');
+      } catch(e) { console.error(e); }
+    }
+    function esc(s) { return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
+    function copyAll() { const ta=document.getElementById('phoneList'); ta.select(); navigator.clipboard.writeText(ta.value); }
+    async function clearAll() { if(confirm('Delete all?')){ await fetch('/api/numbers',{method:'POST'}); load(); } }
+    load(); setInterval(load,5000);
+  </script>
+</body>
+</html>
