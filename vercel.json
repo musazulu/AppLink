@@ -1,14 +1,6 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/", "destination": "/index.html" },
-    { "source": "/dashboard", "destination": "/dashboard.html" },
-    { "source": "/qr", "destination": "/qr-display.html" }
-  ],
-  "functions": {
-    "api/*.js": {
-      "memory": 128,
-      "maxDuration": 10
-    }
-  }
+    { "source": "/dashboard", "destination": "/dashboard.html" }
+  ]
 }

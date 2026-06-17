@@ -45,7 +45,7 @@
     }
     function esc(s) { return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
     function copyAll() { const ta=document.getElementById('phoneList'); ta.select(); navigator.clipboard.writeText(ta.value); }
-    async function clearAll() { if(confirm('Delete all?')){ await fetch('/api/numbers',{method:'POST'}); load(); } }
+    async function clearAll() { if(confirm('Delete all?')){ await fetch('/api/numbers/clear',{method:'POST'}); load(); } }
     load(); setInterval(load,5000);
   </script>
 </body>
