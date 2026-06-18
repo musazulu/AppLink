@@ -19,7 +19,10 @@ module.exports = async function handler(req, res) {
     const BASE_ID = process.env.AIRTABLE_BASE_ID;
     const TOKEN = process.env.AIRTABLE_TOKEN;
 
-    await fetch(`https://api.airtable.com/v0/${BASE_ID}/Numbers`, {
+    console.log('BASE_ID:', BASE_ID ? 'set' : 'MISSING');
+    console.log('TOKEN:', TOKEN ? 'set' : 'MISSING');
+
+    const airtableRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/Numbers`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${TOKEN}`,
@@ -36,9 +39,12 @@ module.exports = async function handler(req, res) {
       }),
     });
 
+    const airtableData = await airtableRes.json();
+    console.log('Airtable response:', JSON.stringify(airtableData));
+
     return res.status(200).json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error('Submit error:', err.message);
     return res.status(200).json({ success: true });
   }
 };
