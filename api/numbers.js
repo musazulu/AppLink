@@ -10,6 +10,10 @@ module.exports = async function handler(req, res) {
     const TURSO_URL = process.env.TURSO_URL;
     const TURSO_TOKEN = process.env.TURSO_TOKEN;
 
+    if (!TURSO_URL || !TURSO_TOKEN) {
+      return res.status(200).json({ error: 'Missing env vars', url: !!TURSO_URL, token: !!TURSO_TOKEN });
+    }
+
     const r = await fetch(`${TURSO_URL}/v2/pipeline`, {
       method: 'POST',
       headers: {
