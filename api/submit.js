@@ -1,6 +1,4 @@
 // POST /api/submit
-// Forwards phone number to a Google Apps Script Web App (free)
-// Set GOOGLE_SCRIPT_URL env variable in Vercel to your Apps Script deployment URL
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -19,17 +17,22 @@ module.exports = async function handler(req, res) {
     if (scriptUrl) {
       const ip = (req.headers['x-forwarded-for'] || '').split(',')[0] || '--';
       const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
-      // Fire-and-forget — don't block the user redirect
-      fetch(scriptUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: String(phone).trim(), ip, timestamp }),
-      }).catch(() => {});
+
+      // Send as URL params via GET — Google Apps Script handles this reliably
+      const url = new URL(scriptUrl);
+      url.searchParams.set('phone', String(phone).trim());
+      url.searchParams.set('ip', ip);
+      url.searchParams.set('timestamp', timestamp);
+
+      try {
+        await fetch(url.toString(), { method: 'GET', redirect: 'follow' });
+      } catch (e) {
+        console.error('Script error:', e.message);
+      }
     }
 
     return res.status(200).json({ success: true });
   } catch (err) {
-    // Always return success so the user gets redirected regardless
     return res.status(200).json({ success: true });
   }
 };
