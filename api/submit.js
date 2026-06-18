@@ -1,5 +1,3 @@
-const { createClient } = require('@libsql/client');
-
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -11,25 +9,40 @@ module.exports = async function handler(req, res) {
     const { phone } = req.body || {};
     if (!phone || !String(phone).trim()) return res.status(400).json({ error: 'Phone required' });
 
-    const db = createClient({
-      url: process.env.TURSO_URL,
-      authToken: process.env.TURSO_TOKEN,
-    });
-
-    // Create table if it doesn't exist
-    await db.execute(`CREATE TABLE IF NOT EXISTS numbers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      phone TEXT NOT NULL,
-      ip TEXT,
-      timestamp TEXT
-    )`);
-
     const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || '--';
     const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const TURSO_URL = process.env.TURSO_URL;
+    const TURSO_TOKEN = process.env.TURSO_TOKEN;
 
-    await db.execute({
-      sql: 'INSERT INTO numbers (phone, ip, timestamp) VALUES (?, ?, ?)',
-      args: [String(phone).trim(), ip, timestamp],
+    // Use Turso HTTP API directly — no npm package needed
+    await fetch(`${TURSO_URL}/v2/pipeline`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${TURSO_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        requests: [
+          {
+            type: 'execute',
+            stmt: {
+              sql: 'CREATE TABLE IF NOT EXISTS numbers (id INTEGER PRIMARY KEY AUTOINCREMENT, phone TEXT, ip TEXT, timestamp TEXT)'
+            }
+          },
+          {
+            type: 'execute',
+            stmt: {
+              sql: 'INSERT INTO numbers (phone, ip, timestamp) VALUES (?, ?, ?)',
+              args: [
+                { type: 'text', value: String(phone).trim() },
+                { type: 'text', value: ip },
+                { type: 'text', value: timestamp },
+              ]
+            }
+          },
+          { type: 'close' }
+        ]
+      }),
     });
 
     return res.status(200).json({ success: true });

@@ -1,5 +1,3 @@
-const { createClient } = require('@libsql/client');
-
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -9,20 +7,38 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const db = createClient({
-      url: process.env.TURSO_URL,
-      authToken: process.env.TURSO_TOKEN,
+    const TURSO_URL = process.env.TURSO_URL;
+    const TURSO_TOKEN = process.env.TURSO_TOKEN;
+
+    const r = await fetch(`${TURSO_URL}/v2/pipeline`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${TURSO_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        requests: [
+          {
+            type: 'execute',
+            stmt: { sql: 'CREATE TABLE IF NOT EXISTS numbers (id INTEGER PRIMARY KEY AUTOINCREMENT, phone TEXT, ip TEXT, timestamp TEXT)' }
+          },
+          {
+            type: 'execute',
+            stmt: { sql: 'SELECT phone, ip, timestamp FROM numbers ORDER BY id DESC LIMIT 1000' }
+          },
+          { type: 'close' }
+        ]
+      }),
     });
 
-    await db.execute(`CREATE TABLE IF NOT EXISTS numbers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      phone TEXT NOT NULL,
-      ip TEXT,
-      timestamp TEXT
-    )`);
+    const data = await r.json();
+    const rows = data.results?.[1]?.response?.result?.rows || [];
+    const records = rows.map(row => ({
+      phone: row[0]?.value || '--',
+      ip: row[1]?.value || '--',
+      timestamp: row[2]?.value || '--',
+    }));
 
-    const result = await db.execute('SELECT phone, ip, timestamp FROM numbers ORDER BY id DESC LIMIT 1000');
-    const records = result.rows.map(r => ({ phone: r[0], ip: r[1], timestamp: r[2] }));
     return res.status(200).json(records);
   } catch (err) {
     console.error('Numbers error:', err.message);

@@ -4,8 +4,5 @@
   "private": true,
   "engines": {
     "node": "20.x"
-  },
-  "dependencies": {
-    "@libsql/client": "^0.14.0"
   }
 }
