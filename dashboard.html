@@ -8,134 +8,68 @@
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#0f172a; color:#e2e8f0; padding:20px; }
     .container { max-width:800px; margin:0 auto; }
-    h1 { font-size:24px; margin-bottom:4px; }
-    .stats { color:#94a3b8; margin:8px 0 16px; }
+    h1 { font-size:24px; }
     table { width:100%; border-collapse:collapse; background:#1e293b; border-radius:12px; overflow:hidden; margin-top:16px; }
     th,td { padding:10px 14px; text-align:left; font-size:14px; }
     th { background:#334155; color:#94a3b8; font-weight:600; text-transform:uppercase; font-size:12px; }
     td { border-bottom:1px solid #334155; }
     tr:last-child td { border-bottom:none; }
     .btn { padding:10px 20px; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; margin-right:8px; }
+    .btn-danger { background:#ef4444; color:#fff; }
     .btn-secondary { background:#334155; color:#e2e8f0; }
-    .btn-refresh { background:#667eea; color:#fff; }
     .empty { text-align:center; padding:40px; color:#64748b; }
-    textarea { width:100%; height:100px; background:#1e293b; color:#e2e8f0; border:1px solid #334155; border-radius:8px; padding:12px; font-family:monospace; margin-top:8px; resize:vertical; }
-    .setup-box { background:#1e293b; border:1px solid #334155; border-radius:12px; padding:24px; margin-bottom:20px; }
-    .setup-box h2 { font-size:16px; margin-bottom:8px; color:#e2e8f0; }
-    .setup-box p { font-size:13px; color:#94a3b8; margin-bottom:12px; }
-    .setup-box input { width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155; border-radius:8px; color:#e2e8f0; font-size:14px; }
-    .setup-box input:focus { outline:none; border-color:#667eea; }
-    .btn-save { background:#667eea; color:#fff; padding:10px 20px; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; margin-top:10px; }
+    .stats { color:#94a3b8; margin:8px 0 16px; }
+    textarea { width:100%; height:100px; background:#1e293b; color:#e2e8f0; border:1px solid #334155; border-radius:8px; padding:12px; font-family:monospace; margin-top:8px; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>&#128203; Collected Numbers</h1>
     <p class="stats" id="statsLine">Loading...</p>
-
-    <div id="setupBox" class="setup-box" style="display:none;">
-      <h2>&#128273; Enter your Formspree API Key</h2>
-      <p>Get your API key from <a href="https://formspree.io/account/api" target="_blank" style="color:#667eea;">formspree.io/account/api</a> — it's free. This is saved in your browser only.</p>
-      <input type="password" id="apiKeyInput" placeholder="Paste your Formspree API key here..." />
-      <br/>
-      <button class="btn-save" onclick="saveKey()">Save & Load Numbers</button>
+    <div>
+      <button class="btn btn-secondary" onclick="copyAll()">&#128203; Copy All</button>
+      <button class="btn btn-danger" onclick="clearAll()">&#128465; Clear All</button>
     </div>
-
-    <div id="mainContent" style="display:none;">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-secondary" onclick="copyAll()">&#128203; Copy All</button>
-        <button class="btn btn-refresh" onclick="load()">&#8635; Refresh</button>
-        <button class="btn btn-secondary" onclick="clearKey()">&#128274; Change API Key</button>
-      </div>
-      <textarea id="phoneList" readonly placeholder="Numbers will appear here..."></textarea>
-      <table>
-        <thead><tr><th>#</th><th>Phone</th><th>Date</th></tr></thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-    </div>
+    <textarea id="phoneList" readonly></textarea>
+    <table>
+      <thead><tr><th>#</th><th>Phone</th><th>Date</th><th>IP</th></tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
   </div>
-
   <script>
-    const FORM_ID = 'mdkgjboo';
-    const KEY_STORE = 'formspree_api_key';
-
-    function getKey() { return localStorage.getItem(KEY_STORE); }
-
-    function saveKey() {
-      const key = document.getElementById('apiKeyInput').value.trim();
-      if (!key) return alert('Please enter your API key');
-      localStorage.setItem(KEY_STORE, key);
-      init();
-    }
-
-    function clearKey() {
-      localStorage.removeItem(KEY_STORE);
-      init();
-    }
-
-    function init() {
-      const key = getKey();
-      if (!key) {
-        document.getElementById('setupBox').style.display = 'block';
-        document.getElementById('mainContent').style.display = 'none';
-        document.getElementById('statsLine').textContent = 'API key required';
-      } else {
-        document.getElementById('setupBox').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'block';
-        load();
-      }
-    }
-
     async function load() {
-      const key = getKey();
-      if (!key) return init();
-      document.getElementById('statsLine').textContent = 'Loading...';
       try {
-        const r = await fetch(`https://formspree.io/api/0/forms/${FORM_ID}/submissions?page_size=1000`, {
-          headers: { 'Authorization': `Bearer ${key}`, 'Accept': 'application/json' }
-        });
-        if (r.status === 401) {
-          document.getElementById('statsLine').textContent = 'Invalid API key';
-          clearKey();
-          return;
-        }
+        const r = await fetch('/api/numbers');
         const data = await r.json();
-        const submissions = data.submissions || [];
-        document.getElementById('statsLine').textContent = submissions.length + ' total';
-
+        document.getElementById('statsLine').textContent = data.length + ' total';
         const ta = document.getElementById('phoneList');
-        if (!submissions.length) {
+        if (!data.length) {
           ta.value = '';
-          document.getElementById('tableBody').innerHTML = '<tr><td colspan="3" class="empty">No numbers yet</td></tr>';
+          document.getElementById('tableBody').innerHTML = '<tr><td colspan="4" class="empty">No numbers yet</td></tr>';
           return;
         }
-
-        ta.value = submissions.map(s => s.data?.phone || s.body?.phone || '--').join('\n');
-        document.getElementById('tableBody').innerHTML = submissions.map((s, i) => {
-          const phone = esc(s.data?.phone || s.body?.phone || '--');
-          const date = esc(s.date ? new Date(s.date).toLocaleString() : '--');
-          return `<tr><td>${i+1}</td><td>${phone}</td><td>${date}</td></tr>`;
-        }).join('');
-      } catch(err) {
-        document.getElementById('statsLine').textContent = 'Error loading data';
-        console.error(err);
-      }
+        ta.value = data.map(e => e.phone).join('\n');
+        document.getElementById('tableBody').innerHTML = data.map((e, i) =>
+          '<tr><td>' + (i+1) + '</td><td>' + esc(e.phone) + '</td><td>' + esc(e.timestamp) + '</td><td>' + esc(e.ip) + '</td></tr>'
+        ).join('');
+      } catch(err) { console.error(err); }
     }
-
     function esc(s) {
       return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
     }
-
     function copyAll() {
       const ta = document.getElementById('phoneList');
       ta.select();
-      navigator.clipboard.writeText(ta.value).catch(() => {
-        document.execCommand('copy');
-      });
+      navigator.clipboard.writeText(ta.value).catch(() => document.execCommand('copy'));
     }
-
-    init();
-    setInterval(load, 15000);
+    async function clearAll() {
+      if (confirm('Delete all numbers?')) {
+        await fetch('/api/numbers/clear', { method: 'POST' });
+        load();
+      }
+    }
+    load();
+    setInterval(load, 5000);
   </script>
 </body>
 </html>
